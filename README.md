@@ -15,10 +15,11 @@ Prepare your client to run this library
 
 - in your NotificationTest TwinCAT PLC project add a new variable in Main called writeVar
 
+
+- navigate into the catkin_ws/src directory
+
 - git clone the ads_rw_usbcam repo into the src folder of catkin workspace:
 git clone https://github.com/Dshieff/ads_rw_usbcam.git <directory>
-
-- navigate into the catkin directory
 
 - build the ads_rw_usbcam package (the version of python is 3.10, can be different)
 catkin build
