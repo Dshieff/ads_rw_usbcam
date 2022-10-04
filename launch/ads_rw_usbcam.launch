@@ -1,0 +1,14 @@
+<launch>
+  <node
+    pkg="ads_rw_usbcam"
+    type="usbcam_pub"
+    name="usbcam_pub"
+    output="screen"
+  />
+  <node
+    pkg="ads_rw_usbcam"
+    type="usbcam_sub"
+    name="usbcam_sub"
+    output="screen"
+  />
+</launch> 
