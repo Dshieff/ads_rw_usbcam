@@ -15,6 +15,9 @@ Prepare your client to run this library
 
 - in your NotificationTest TwinCAT PLC project add a new variable in Main called writeVar
 
+- install these ROS packages:
+  - sudo apt-get install ros-(ROS version name)-cv-bridge
+  - sudo apt-get install ros-(ROS version name)-image-transport
 
 - navigate into the catkin_ws/src directory
 
