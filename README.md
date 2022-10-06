@@ -44,3 +44,5 @@ roscore
 rospack find ads_rw_usbcam
 
 - make sure that your TwinCAT NotificationTest project is running on your Target!
+
+- launch the launch file: roslaunch ads_rw_usbcam ads_rw_usbcam.launch
