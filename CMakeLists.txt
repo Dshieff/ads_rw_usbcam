@@ -14,7 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
   std_msgs
-  ADSROS
+  adsros
 )
 
 find_package(OpenCV)
