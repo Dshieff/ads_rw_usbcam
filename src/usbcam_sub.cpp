@@ -2,7 +2,10 @@
 #include <image_transport/image_transport.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <cv_bridge/cv_bridge.h>
-#include <std_msgs/Int16.h>
+#include <std_msgs/Int32.h>
+#include <iostream>
+using namespace std;
+//using namespace bhf;
 
 #include "AdsLib/AdsLib.h"
 #include "AdsLib/AdsNotificationOOI.h"
@@ -18,18 +21,18 @@
 // Date: June 27, 2020, June 16 2022
  
  //declaring a pointer to member so the msg can be called in a parallel loop
- typedef const boost::function< void(const std_msgs::Int16::ConstPtr& msg)> callback;
+ typedef const boost::function< void(const std_msgs::Int32::ConstPtr& msg)> callback;
 
 
 //member function, the call back is in here
 class subscriberReader {
   public:
     int avg_frame_col;
-    void avgColourCallback(const std_msgs::Int16::ConstPtr& msg);
+    void avgColourCallback(const std_msgs::Int32::ConstPtr& msg);
  };
 
 
-void subscriberReader::avgColourCallback(const std_msgs::Int16::ConstPtr& msg)
+void subscriberReader::avgColourCallback(const std_msgs::Int32::ConstPtr& msg)
 {
   this->avg_frame_col = msg->data;
 }
@@ -37,9 +40,13 @@ void subscriberReader::avgColourCallback(const std_msgs::Int16::ConstPtr& msg)
 
 static void writeAvgColour(int avgColourIn,const AdsDevice& route)
 {
-    AdsVariable<uint8_t> avgColourOut {route, "MAIN.writeVar"};
-    avgColourOut = avgColourIn;
-    
+    uint8_t frameR = (int)(avgColourIn/1000000); 
+    uint8_t frameG = (int)((avgColourIn - frameR*1000000)/1000);
+    uint8_t frameB = (int)(avgColourIn - frameR*1000000 - frameG*1000);
+    std::array<uint8_t,3> avgFrameCol = {frameR,frameG,frameB};
+    //AdsVariable<std::array<uint8_t,3>> avgColourOut {route, "MAIN.writeArray"};
+    long error = AdsSyncWriteReqEx(route.GetLocalPort(),&route.m_Addr,0x4020,0,3,&avgFrameCol);
+    //avgColourOut = avgFrameCol;
 
     ROS_INFO("Average Colour of Camera Frame [%d] is written to Main.writeVar", avgColourIn);
 }
@@ -47,22 +54,32 @@ static void writeAvgColour(int avgColourIn,const AdsDevice& route)
 //set rate to be slow enough so that TwinCAT is happy
 void sendToADSThread(int const & avgColour)
 {
-  ros::Rate rate(10);
+  ros::Rate rate(50);
 
   // AMS net ID of the TwinCAT route on the target
-  static const AmsNetId remoteNetId { 10, 199, 109, 140, 1, 1 };
+  static const AmsNetId remoteNetId { 5, 71, 63, 181, 1, 1 };
   //IP address of the target (TC computer)
-  static const char remoteIpV4[] = "192.168.0.2";
-
+  static const char remoteIpV4[] = "192.168.1.8";
   // uncomment and adjust if automatic AmsNetId does not work (for the client, which is this computer)
-  bhf::ads::SetLocalAddress({192, 168, 0, 1, 1, 1});
+  bhf::ads::SetLocalAddress({192, 168, 1, 4, 1, 1});
+  AdsDeviceState AdsState;
 
-  AdsDevice route {remoteIpV4, remoteNetId, AMSPORT_R0_PLC_TC3};
-
+  char buffer;
+  uint32_t bytesRead;
+ // AdsDevice route {remoteIpV4, remoteNetId, AMSPORT_R0_PLC_TC3};
   while (ros::ok()) {
-
-      writeAvgColour(avgColour,route);
-
+     AdsDevice route {remoteIpV4, remoteNetId, AMSPORT_R0_PLC_TC3};
+     uint16_t state[2];
+     long error = AdsSyncReadStateReqEx(route.GetLocalPort(),&route.m_Addr, &state[0], &state[1]);
+     //long status = AdsSyncReadReqEx2(route.GetLocalPort(),&route.m_Addr,0x4020,0,3,&buffer,&bytesRead);
+     // AdsDeviceState AdsState = route.GetState();
+     if (error == 0) {
+	ROS_INFO("error not read");
+        writeAvgColour(avgColour,route);
+     }
+     // ROS_INFO("StateInfo [%d]", AdsState.ads);
+     ROS_INFO("error [%ld]", error);
+     // ROS_INFO("status [%ld]", status);
       rate.sleep();
   }
 
@@ -72,10 +89,10 @@ int main(int argc, char **argv)
 {
   // The name of the node
   ros::init(argc, argv, "avgColour_listener");
-   
   // Default handler for nodes in ROS
   ros::NodeHandle nh;
-   
+  
+  //ros::Duration(20.0).sleep();
   // Used to publish and subscribe to images
   image_transport::ImageTransport it(nh);
   
@@ -84,9 +101,8 @@ int main(int argc, char **argv)
   //using boost bind to point to a member function
   callback boundAvgColourCallback = boost::bind( &subscriberReader::avgColourCallback, &subscriberInstance, _1);
 
-
   // Subscribe to the /camera topic
-  ros::Subscriber sub = nh.subscribe("averageColour", 10, boundAvgColourCallback);
+  ros::Subscriber sub = nh.subscribe("averageColour", 1, boundAvgColourCallback);
 
   //runs the ads in a different loop 
   std::thread worker(sendToADSThread, std::ref(subscriberInstance.avg_frame_col));
