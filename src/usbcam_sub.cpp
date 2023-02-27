@@ -50,9 +50,10 @@ static void writeAvgColour(int avgColourIn,const AdsDevice& route)
     ROS_INFO("Average Colour of Camera Frame [%d] is written to Main.writeVar", avgColourIn);
 }
 
-//set rate to be slow enough so that TwinCAT is happy
+
 void sendToADSThread(int const & avgColour)
 {
+  //set rate here - dependent on application
   ros::Rate rate(50);
 
   // AMS net ID of the TwinCAT route on the target
