@@ -44,10 +44,9 @@ static void writeAvgColour(int avgColourIn,const AdsDevice& route)
     uint8_t frameG = (int)((avgColourIn - frameR*1000000)/1000);
     uint8_t frameB = (int)(avgColourIn - frameR*1000000 - frameG*1000);
     std::array<uint8_t,3> avgFrameCol = {frameR,frameG,frameB};
-    //AdsVariable<std::array<uint8_t,3>> avgColourOut {route, "MAIN.writeArray"};
+    
+    //the variable is written to a zero offset in the main plc code
     long error = AdsSyncWriteReqEx(route.GetLocalPort(),&route.m_Addr,0x4020,0,3,&avgFrameCol);
-    //avgColourOut = avgFrameCol;
-
     ROS_INFO("Average Colour of Camera Frame [%d] is written to Main.writeVar", avgColourIn);
 }
 
@@ -66,20 +65,17 @@ void sendToADSThread(int const & avgColour)
 
   char buffer;
   uint32_t bytesRead;
- // AdsDevice route {remoteIpV4, remoteNetId, AMSPORT_R0_PLC_TC3};
   while (ros::ok()) {
      AdsDevice route {remoteIpV4, remoteNetId, AMSPORT_R0_PLC_TC3};
+     //dummy function to detect errors in the connection between client and target
      uint16_t state[2];
      long error = AdsSyncReadStateReqEx(route.GetLocalPort(),&route.m_Addr, &state[0], &state[1]);
-     //long status = AdsSyncReadReqEx2(route.GetLocalPort(),&route.m_Addr,0x4020,0,3,&buffer,&bytesRead);
-     // AdsDeviceState AdsState = route.GetState();
+	  
      if (error == 0) {
-	ROS_INFO("error not read");
         writeAvgColour(avgColour,route);
      }
-     // ROS_INFO("StateInfo [%d]", AdsState.ads);
+	  
      ROS_INFO("error [%ld]", error);
-     // ROS_INFO("status [%ld]", status);
       rate.sleep();
   }
 
@@ -92,7 +88,6 @@ int main(int argc, char **argv)
   // Default handler for nodes in ROS
   ros::NodeHandle nh;
   
-  //ros::Duration(20.0).sleep();
   // Used to publish and subscribe to images
   image_transport::ImageTransport it(nh);
   
@@ -110,7 +105,4 @@ int main(int argc, char **argv)
 
   ros::spin();
   worker.join();
-   
-  // Close down OpenCV
-  //cv::destroyWindow("view");
 }
